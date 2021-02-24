@@ -1,0 +1,310 @@
+Cost -- high
+maintanence -- complex
+Big data -- performance
+Dynamic data types-- semi  structured, unstructured dtaa 
+   audios, videos
+License cost
+Scalability  -- scale up my db - cost,performance; complex op
+Vertical scaling
+Availability of data-- 365; 24/7 ; server is going to down -- ms; sec
+Clustering : break up the data and store in diff physical servers
+
+Schema of table 
+Fixed number of columns, data types of each column, Normal forms
+
+Emp
+empId,empName,salary,hobbies
+
+
+Nosql -- break all the limitations
+1. No schema 
+2. Scalability -- horizontal scaling
+Vertical server : 64gb ram, 1tb
+		256gb ram, 100 tb
+Horizontal scaling: 1 server : 64gb ram, 1tb
+		3 servers: 64gb ram, 25tb
+Data availability: Redundant data in 3 servers -- replication
+Clustering: break up the data and store it in 4 different servers-- sharding
+replication and sharding is built -in  
+3. Unstructured / semi structured - no schema; methodologies gridfs
+4. Performance -- retrieval time; monitoring ; indexes; speed 
+	simple; complex(index on multiple fields), index on an array field,array on object; text; geo spatial index; wild card index; sparse index ; profiler; ops manager -- tool 
+
+nosql db -- ACID compliance -- no
+transaction oriented -- RDBMS 
+
+Cloud 
+hadoop -- big data -- analytics ; 
+
+
+Replication
+2 clients -- modify the same emp's(101) salary
+
+transaction -- document level
+
+locks (exclusive, yielding )
+read and write op
+
+replication 
+3 node replica set
+ 3  different servers N1,N2, N3;  priority-- integer 0 to any number
+
+Initialise the replica set; 3 nodes have the same data
+1. Election
+	3 nodes - 1 node primary; 2 nodes secondary
+read / write op ---> Primary default
+Configure : read--> Primary and sec ; write ---> only to the primary
+empId:101,salary=222
+2. read op ; N1(primary), N2,N3
+3. write op: N1(primary)  
+update emp set salary=1000 where empId=101
+a. write performed on primary
+   secondaries asynchronously sync with the primary
+N3 can sync and n2 sync
+ Before n2 can finish sync ---> read N2
+select * from emp where empId=101
+N2  ---> 222
+
+ 
+select * from emp where empId=101
+N1  ---> 1000
+N3 ---->1000
+
+Availability : 
+3 nodes (N1-- primary)
+
+n2 is down
+N1, n3 -- handle read
+N1 -- handle write
+
+n2 is up again
+
+n1 -- is down
+
+read -- n2, n3 
+write -- election take place 
+eleigible secondaries will become the primary -- N2 primary
+ write -- N2
+
+primary is down-- 10 sec ; no heart beat from primary is down
+election -- time  -- 10 sec
+
+write op --- down -- max 20 sec
+
+Each and every node is going to exchange a heart beat with each and every node  -- 2 sec
+
+Election process:
+notification; candidates;voting ;Majority wins
+
+Replica set --- max of 50 members; 7 of them can vote
+Node -- priority (greater than or equal to zero)
+     -- vote (0 or 1)
+    -- hidden( specialised tasks -- back up; restore ; 
+        not handle read or write; hidden from the application) ;       ----delayed nodes-- sync with the primary after a delay 
+	rollback is not there; 
+    -- arbiter --break the tie during the election
+
+candidates -- have a priority greater than 0
+
+Election Algorithm:
+1. Node with the highest priority 
+ 2 nodes which have the same highest priority
+2. Node which has synced with the earlier primary --more --- next primary
+  2 nodes which have completely synced with the previous pimary
+3. node which was a primary earlier-- primary preferred node
+  both of nodes have been primary earlier
+4. round robin 
+
+
+
+For 10sec -- no heart beat from a particular node --- down
+
+write op -- primary
+none of the sec have synced and primary is down ;; what will happen to the write op
+
+3 nodes  -- majority: 2
+5 nodes -- 3
+11 nodes --6
+
+write op--- query; writeConcern: number or majority
+update emp set salary=1000 where empId=101
+Replica set -- 5 nodes (1-primary; 4 -secondaries)
+1. write op-- query writeConcern :1
+query -- primary ; successful on the primary 
+	a. client -- success status 
+	b. 4 sec will sync
+
+2. write op-- query writeConcern :majority
+query -- primary ; successful on the primary and any 2 secondaries(sync)
+	a. client will success status
+	b. 2 sec will sync
+
+3. write op-- query writeConcern :5
+query -- primary ; successful on the primary and all 4 secondaries(sync)
+	a. client will success status
+	b. 2 sec will sync
+
+4. write op-- query writeConcern :1
+query -- primary ; successful on the primary 
+	a. client will success status
+	b.primary is down before the sec can sync
+write op is also not available for the sec
+data loss
+client -- success ; data -- old 
+
+Journaling-- reduce the data loss
+
+5.write op-- query writeConcern :majority
+query -- primary ; successful on the primary(n1) and any 2 secondaries(sync N2,n4)
+	a. client will success status
+	b. primary is down
+	c. election takes place
+	d. if n2 or n4 becomes primary --- no data loss 
+		n2 -- primary
+		n3,n4,n5 sync with n2; 
+		n3 and n5 will do the write op
+	e. if n3 or n5 becomes the primary -- data loss; 
+		n3 -- primary
+		n2 and n4 sync with n3;
+		write op(n2,n4) will be lost
+
+6. write op-- query writeConcern :1
+query -- primary ; primary is down 
+	election will take place
+	client retry of op(mongodb driver -- built in retry)
+	
+Always sec syn with the primary. Never the primary syncs with the sec	
+writeMajority:
+
+node--  replicationlag -- time -- how much it is behind the primary
+
+3 node replica set
+N1 -- primary; n2,n3 -- sec
+
+n1 goes down ;election ; n2 -- primary
+
+n1 is up and running ; n2 -- primary ; no changes
+
+n1-- primary preferred node
+
+
+1. Create a database
+use citibankDb
+// create the db and switch over to db
+
+2. Create the table
+Collections and documents
+table --> collection
+record --> document
+column ---> field
+
+create my collection explicitly -- no 
+inserting the doc
+create table emp
+{
+empId varchar2(20) primary key....
+}
+
+mongodb -- doc -- bson 
+binary json
+
+json: data types : number, string, array, boolean,date,object
+bson: all the data types in json + int, float, ObjectId
+ObjectId 12 byte hexa decimal number -- combination of machineid,process Id, timestamp, counter
+
+doc -- json object format
+{"empId":101,"empName":"sara","salary":7989}
+
+Whenever a coll is created, a unique index is going to be created on _id  : name : _id_
+Drop unique index : no
+modify : no
+
+
+create another unique index on empId
+
+create table emp
+{
+empId varchar2(20) primary key,
+aadhaarNumber varchar2(20) unique,
+pancard varchar2(20) unique
+
+
+}
+
+
+insert  -- deprecated
+insertOne({})- insert one doc
+insertMany([{},{},{}]) -- insert many docs
+select * from emp
+
+1.select * from emp
+db.emp.find()
+2.select * from emp where empId=101
+	db.emp.find({empId:101})
+3.select * from emp where sal >1000
+	db.emp.find({salary:{$gt:1000}})
+
+4. select * from emp where sal <1000
+	db.emp.find({salary:{$lt:1000}})
+
+5. select * from emp where sal <=6000
+	db.emp.find({salary:{$lte:1000}})
+6.select * from emp where sal =1000
+	db.emp.find({salary:{$eq:1000}})
+
+// $gt,$lt,$lte,$gte,$ne,$eq
+
+// in, range, like
+select * from emp where empId in (101,103,105)
+	db.emp.find({empId:{$in:[101,103,105]}})
+
+select * from emp where sal between 1000 and 2000
+	db.emp.find({salary:{$gt:1000,$lt:2000}})
+
+select * from emp where empName like "g*"
+pattern matching in javascript
+	db.emp.find({empName:/^g/})
+get all empNames end with "sh"
+	db.emp.find({empName:/sh$/})
+
+get all empNames with a s
+	db.emp.find({empName:/s/i})
+
+collection name, db name, field name - case sesnsitive
+
+Logical operators : and or not
+
+select * from emp where empName like "*a*" and salary >5000
+	db.emp.find({
+	$and:[{empName:/a/i},{salary:{$gt:5000}}]
+})
+
+select * from emp where empName like "*a*" or salary >5000
+	db.emp.find({
+	$or:[{empName:/a/i},{salary:{$gt:5000}}]
+})
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
