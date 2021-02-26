@@ -1,0 +1,346 @@
+http://collabedit.com/hxbrf
+
+Compound Index :
+
+db.zipcode.createIndex({state:1,city:-1})
+1. Sort order is very important
+2. Leading field -- state;
+For the query to use the index , the leading field should be there
+3. Fields -- number,string,object,embeddeb object
+4. Compound has more priority than a simple index
+
+
+db.zipcode.find({state:"AK"})//yes
+db.zipcode.find({state:"MA",city:"AGAWAM"});//yes
+db.zipcode.find({city:"AGAWAM"});//no
+
+
+db.zipcode.find().sort({state:1});//yes
+db.zipcode.find().sort({state:-1});//yes
+db.zipcode.find().sort({city:-1});//no
+db.zipcode.find().sort({city:1});//no
+db.zipcode.find().sort({state:1,city:1});//no
+db.zipcode.find().sort({state:1,city:-1});//yes
+db.zipcode.find().sort({state:-1,city:1});//yes; exact opposite
+db.zipcode.find().sort({state:-1,city:-1});//no
+
+//multi key index
+db.zipocde.createIndex({loc:1})
+// hash key
+db.emp.createIndex({empName:"hashed"})
+
+// text index
+db.restaurant.createIndex({name:"text"})
+
+//ttl index:
+
+db.sample1.insertMany([
+{empId:101,doj:new Date()},
+{empId:102,doj:new Date(2020,10,12)},
+{empId:103,doj:new Date(2021,10,12)}])
+
+db.sample1.createIndex({doj:1},{expireAfterSeconds:300})
+
+
+db.emp.createIndex({empId:1,empName:1,salary:1})
+db.emp.find({empId:1})
+db.emp.find({empId:1,empName:"sara"})
+
+Not be used
+db.emp.find({empName:"sara"})
+db.emp.find({empName:"sara",sal:789})
+
+// Replication
+
+3 Node replica set
+3 servers 
+3 server are going to have the same data
+write,reads --> primary
+configure reads--> primary,sec
+
+node : priority: 0 or higher number
+vote: 1 or 0
+7 voting member out of the 50 members
+
+primary
+normal sec node
+arbiter -- no data; only works during the election process
+zero priority node -- cannot become the primary
+delayed node
+hidden node
+
+Odd number of nodes in the replica set
+
+# 3node replica set
+local host
+port 101, dbpath : data1; replica set name :rs1
+port 102, dbpath : data2; replica set name :rs1
+port 103, dbpath : data3; replica set name :rs1
+
+mongod --port 27017 --dbpath c:/data/db  // standalone server
+
+mongod --port 101 --dbpath C:\Users\Administrator\Desktop\replication\data1 --replSet rs1
+
+mongod --port 102 --dbpath C:\Users\Administrator\Desktop\replication\data2 --replSet rs1
+
+mongod --port 103 --dbpath C:\Users\Administrator\Desktop\replication\data3 --replSet rs1
+
+
+
+
+mongod --port 101 --dbpath C:\Users\Administrator\Desktop\replication\data1 --replSet rs1
+
+mongod --port 102 --dbpath C:\Users\Administrator\Desktop\replication\data2 --replSet rs1
+
+mongod --port 103 --dbpath C:\Users\Administrator\Desktop\replication\data3 --replSet rs1
+
+Open 4th command prompt from the bin folder
+mongo --port 101
+
+Initiate the replica set
+rs.initiate({
+_id:"rs1",
+members:[
+{_id:0,host:"localhost:101"},
+{_id:1,"host":"localhost:102"},
+{_id:2,host:"localhost:103"}]
+})
+
+https://codeshare.io/2K2NOz
+
+rs.status()
+rs.config()
+use replicaDb
+db.books.insert({bookId:101,author:"Mark"})
+db.books.find()
+
+
+Disconnect from the shell  -- Ctrl c
+
+mongo --port 102
+
+-- handle writes -- no
+-- handle reads -- configure
+
+rs.slaveOk()
+use replicaDb
+db.books.find()
+
+db.books.insert({bookId:102,author:"James"});// error
+
+
+// Arbiter
+Create the data4 folder in the replication folder
+mongod --port 104 --dbpath C:\Users\Administrator\Desktop\replication\data4 --replSet rs1
+
+Connect to the primary
+mongo --port 101
+
+rs.addArb("localhost:104")
+
+will not have the data
+Diconnect form the primary
+mongo --port 104
+
+use replicaDb
+rs.slaveOk()
+db.books.find();// error 
+
+
+Add a zero priority member
+Create a folder data5
+Start a new terminal
+mongod --port 105 --dbpath C:\Users\Administrator\Desktop\replication\data5 --replSet rs1
+
+Disconnect from the arbiter
+Connect to the primary
+mongo --port 101
+
+rs.add({_id:4,host:"localhost:105",priority:0})
+
+// cannot become the primary
+rs.slaveOk()
+use replicaDb
+db.books.find()
+
+// Change the priority of an existing node:
+Connect to the primary( in the 4 cmd prompt)
+mongo --port 101
+
+var myConfig=rs.config()
+myConfig.members[4].priority=10
+rs.reconfig(myConfig)
+// Election will be conducted;
+// Node with the highest prioirty: localhost:105-- will become the primary
+
+
+
+Delayed member
+var myConfig=rs.config()
+myConfig.members[4].slaveDelay=(24*60*60)
+myConfig.members[4].priority=0
+rs.reconfig(myConfig)
+// Election will be conducted;
+
+Delayed new member
+data6
+Open a new cmd prompt
+mongod --port 106 --dbpath "path to data6" --replSet rs1
+
+Connect to the primary(4th cmd prompt)
+Connect to the primary: mongo --port 
+rs.add({_id:5,host:"localhost:106",priority:0,slaveDelay:(24*60*60)})
+
+Hidden new member
+data7
+Open a new cmd prompt
+mongod --port 107 --dbpath "path to data7" --replSet rs1
+
+Connect to the primary(4th cmd prompt)
+rs.add({_id:6,host:"localhost:107",priority:0,hidden:true})
+
+
+hidden -- sync at that time itself; not visible from the client; perform some task like back up restore
+delayed -- sync with the primary after a delay of 24 hours; not visible from the client; 
+
+sharding:
+
+2 memory devices
+1 memory 500 gb  -- main memory
+external hard disk -- 1000gb
+
+2 servers
+
+1000gb of data -- break it up 
+personal and professional data
+personal dtaa --main
+professional dta -- hard disk
+
+excel file
+main -- personal dtaa
+c: 
+d: 
+
+external 
+loc1--- mongodb
+loc2 --- nodejs
+searching for personal data
+
+excel file--> get the req device ---> go that req device -- fetch the files
+
+
+2 shards
+1 shard -- 500gb
+2 shard  -- 700 gb
+
+data 1000gb
+shard key 
+EmpId 1 to 10000
+empname
+salary
+
+Shard key -- empId  index
+min key to 5000 -- shard1
+5001 to 10000 -- shard2
+
+chunk --  set of docs with nearby shard key values
+shard1 
+	chunk1 -- min key to 2500
+  chunk2-- 2501 to 5000
+
+shard1 -- some chunks; chunk --- which all docs
+shard2 -- some chunks
+
+meta information ; data
+data --- shards server
+meta info: -- config server
+chunks,shards
+
+mongos -- stateless router
+
+client app --> mongos--> fetch the meta from config server --> 
+with this meta info ---> mongos talk to that particular shard-- > 
+fetch the data from the shard --> return to the client app
+
+Config server -- replica set(PSS)
+mongod --port 301 --dbpath "path to data1" --replSet configRs1 --configsvr
+mongod --port 302 --dbpath "path to data2" --replSet configRs1 --configsvr
+mongod --port 303 --dbpath "path to data3" --replSet configRs1 --configsvr
+rs.initiate()
+Shards -2
+Shard1 -- Replica set(PSS)
+mongod --port 401 --dbpath "path to data4" --replSet shardRs1 --shardsvr
+mongod --port 402 --dbpath "path to data5" --replSet shardRs1 --shardsvr
+mongod --port 403 --dbpath "path to data6" --replSet shardRs1 --shardsvr
+
+shard2 -- replica set(PSS)
+mongod --port 501 --dbpath "path to data7" --replSet shardRs2 --shardsvr
+mongod --port 502 --dbpath "path to data8" --replSet shardRs2 --shardsvr
+mongod --port 503 --dbpath "path to data9" --replSet shardRs2 --shardsvr
+
+Mongos
+cmd prompt
+mongos --configdb "configRs1/localhost:301" --port 601
+
+
+cmd prompt
+mongo --port 601
+sh.addShard("shardRs1/localhost:401")
+sh.addShard("shardRs1/localhost:402")
+sh.addShard("shardRs1/localhost:403")
+sh.addShard("shardRs2/localhost:501")
+sh.addShard("shardRs2/localhost:502")
+sh.addShard("shardRs2/localhost:503")
+
+
+use citibankDb
+sh.enableSharding("citibankDb")
+db.zipcode.createIndex({state:1})
+sh.shardCollection("citibankDb.zipcode",{state:1})
+Range based sharding
+// 29000 docs
+state -- string : sort the state ;
+"A" to "c" -- chunk 1;  
+"c" to "h" -- chunk 2
+"i" to "l" -- chunk 3
+"m" to "z" -- chunk 4
+
+
+default size of chunk -- 64mb
+
+chunk1, 2-- shard1
+3,4 -- shard2
+
+config server --meta info -- 212 to 222; 
+docs in each chunk
+various chinks in each shard
+
+split up into chunks;
+chunks will be split into the 2 shards
+Automatic splitting of chunk  -- > 64mb
+manual splitting of chunk  -- splitAt(), splitFind()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

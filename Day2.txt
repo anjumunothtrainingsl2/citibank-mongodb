@@ -1,0 +1,272 @@
+db.emp.insertMany([
+{empId:112,empName:"karan",salary:768},
+{empId:113,empName:"Tom",salary:7168,_id:107},
+{empId:114,empName:"harry",salary:2768}])
+
+112,114
+112 -- correct
+no docs only exception
+
+{}-- object
+
+
+db.emp.find()
+https://codeshare.io/5Rjp83
+http://collabedit.com/qhs7p
+
+
+select * from emp where salary is null
+select * from emp where salary = null
+
+db.emp.find({dateOfJoining:{$type:10}})
+
+
+
+db.emp.find({dateOfJoining:{$exists:false}})
+
+
+// find all docs for which _id is not ObjectId
+
+ db.emp.find({_id:{$not:{$type:7}}})  
+db.students.insertMany([{studId:101,studName:"sara",marks:[10,20,30]},
+{studId:102,studName:"lara",marks:[20,30,10]},
+{studId:103,studName:"tara",marks:[70,80,90]},
+{studId:104,studName:"piyush",marks:[10,80,96]},
+{studId:105,studName:"pankaj",marks:[10,55,75]}])
+// exact match
+db.students.find({marks:[10,20,30]}) //101
+
+db.students.find({marks:10})// 101,102,104,105
+
+db.students.find({marks :{$gt:50}}); //104,105,103
+
+db.students.find({marks:{$gt:35,$lt:60}});//104,105;
+db.students.find({marks:{$gt:35},marks:{$lt:60}}) is same as db.students.find({marks:{$lt:60}}) .. why to use 1st one?
+
+db.students.find({marks:{$all:[30,20,10]}});//101,102; exact match but order is not imp
+
+
+db.students.find({marks:{$elemMatch:{$gt:35,$lt:60}}});//105;
+
+
+// Objects:
+db.restaurant.find({"address.zipcode":"10462"})
+
+
+https://github.com/anjumunothtrainingsl2/citibank-mongodb
+
+
+select empId from emp where sal>5000
+db.emp.find({salary:{$gt:5000}},{empId:1})
+
+db.emp.find({salary:{$gt:5000}},{empId:1,_id:0})
+
+// restaurant : restaurant_id, name,zipcode
+
+db.restaurant.find({},{restuarant_id:1,name:1,"address.zipcode":1})
+
+
+// limit, skip, count
+
+db.emp.find().count();// 16
+
+db.emp.find().limit(10);//only 10 doc from the find output will be displayed
+
+db.emp.find().skip(5);//skip the first 5 doc from the find output and then display the entire the result set
+
+
+db.emp.find().skip(5).limit(5);// 6th to 10 docs
+
+db.emp.find().limit(5).skip(5);//6th to 10 docs
+
+select * from emp order by salary
+db.emp.find().sort({salary:1})
+
+select * from emp order by salary,empName desc
+db.emp.find().sort({salary:1,empName:-1})
+
+select * from emp order by empName desc,salary
+db.emp.find().sort({empName:-1,salary:1})
+
+// update 
+// 2pararms 
+// 1st param : search criteria
+// 2nd param -- how to update
+// 3rd param optional 
+// update(), updateOne(),updateMany()
+
+// replace an existing doc
+db.emp.update({empId:108},{empName:"bhavani",salary:989})
+
+_id -- immutable field
+
+update emp set salary=1000 where empId=101
+db.emp.update({empId:101},{$set:{salary:1000}})
+
+update emp set salary=1000,empName="gaurav" where empId=102
+db.emp.update({empId:102},{$set:{salary:1000,empName:"gaurav"}})
+
+
+update emp set salary=salary+1000 where empId=101
+db.emp.update({empId:101},{$inc:{salary:1000}})
+
+update emp set salary=salary-1000 where empId=101
+db.emp.update({empId:101},{$inc:{salary:-1000}})
+
+db.emp.update({empId:101},{$set:{location:"Chennai"}}) 
+
+// mul 
+db.emp.update({empId:101},{$mul:{salary:.5}})
+
+// push
+
+db.emp.update({empId:101},{$push:{hobbies:"singing"}})
+// create an array if hobbies array does not exists; and add the element
+// if it exists; then simply appaend singing to the hobbies array
+
+db.emp.update({empId:101},{$push:{hobbies:["coding","going to the gym"]}})
+["singing","dancing",["coding","going to the gym"]]
+
+db.emp.update({empId:101},{$push:{hobbies:{$each:["eating","sleeping"]}}})
+["singing","dancing",["coding","going to the gym"],"eating","sleeping"]
+
+// remove --- pop, pull
+db.emp.update({empId:101},{$pop:{hobbies:1}})
+
+db.emp.update({empId:101},{$pull:{hobbies:["coding","going to the gym"]}})
+
+db.emp.update({empId:101},{$set:{"address":{"streetNo":5}}})
+
+ db.emp.update({empId:101},{$addToSet:{hobbies:"h5"}})
+ 
+ // aggregation pipeline
+ select sum(salary) from emp
+ 
+select sum(salary) from emp group by deptId
+
+pipeline :
+many stages
+output of 1st stage becomes the input of the second stage
+ select sum(pop) as SumOfPopulation from zipcode
+
+db.zipcode.aggregate([
+{$group:
+{   _id:null,//field on which group by has to be performed,
+    "SumOfPopulation":{$sum:"$pop"}
+ }}
+
+])
+ 
+
+select sum(pop) as SumOfPop,state from zipcode group by state
+db.zipcode.aggregate([
+{$group:{
+_id:"$state",
+"SumOfPop":{$sum:"$pop"}
+}},
+{$project:{
+_id:0,
+"SumOfPop":1,
+"State":"$_id"
+}}])
+
+
+select max(pop) from zipcode
+
+db.zipcode.aggregate([{$group: {
+  _id: null,
+  "MaxOfPOP": {
+    $max: "$pop"
+  },
+  "MinPop":{$min:"$pop"},
+  "AvgPop":{$avg:"$pop"},
+  "SumOfPOp":{$sum:"$pop"},
+  "CountOfDocs":{$sum:1}
+}}, {$project: {
+  _id:0
+}}])
+
+
+select count(*) from emp
+
+db.zipcode.aggregate([{$group: {
+  _id: "$state",
+  "MaxOfPOP": {
+    $max: "$pop"
+  },
+  "MinPop":{$min:"$pop"},
+  "AvgPop":{$avg:"$pop"},
+  "SumOfPOp":{$sum:"$pop"},
+  "CountOfDocs":{$sum:1}
+}}, {$project: {
+  _id:0,
+  state:"$_id",
+   "MaxOfPOP":1,
+  "MinPop":1,
+  "AvgPop":1,
+  "SumOfPOp":1,
+  "CountOfDocs":1
+
+  }}])
+
+
+select sum(pop) from zipcode group by state,city
+
+group by state
+for each state, group city
+for each group(state,city) -- sum(pop)
+
+select sum(pop) from zipcode group by city,state ;// same answer
+[{$group: {
+  _id: {field1:"$state",field2:"$city"},
+  "SumOfPop": {
+    $sum: "$pop"
+  }
+}}, {$project: {
+  _id:0,
+  "SumOfPop":1,
+  "state":"$_id.field1",
+  "city":"$_id.field2"
+}}]
+
+select sum(pop) from zipcode where pop>500
+
+1. where -- $match
+2.sum(pop) -- $group
+[{$match: {
+  pop:{$gt:500}
+}}, {$group: {
+  _id:"null",
+  "SumOfPop": {
+    "$sum": "$pop"
+  }
+}}]
+
+
+
+[] -- array
+() -- function call
+interchange the brackets 
+
+
+db.emp.find()
+
+http://collabedit.com/5648a
+
+Indexes
+
+db.emp.createIndex({empId:1});// empId_1 ;; asc of empId
+
+db.zipcode.createIndex({state:-1})
+// Types of index
+1. simple index -- number, string, object, object's embedded field
+2. compound index -- index on multiple fields(2 or more)
+3. Multi key index -- index on an array field
+4. Text Index -- full text search 
+5. Hash Index -- hash algorithm is used
+6. TTL index -- Total time to live index-- create the index only on a date field; expiryAfterSeconds : 300
+300 sec expired after the date field -- document will be deleted
+use case : logs only for a month
+
+_id  -- 12 bytes
+address  -- object -- 4 or 5 fields (50 bytes) 

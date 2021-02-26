@@ -1,0 +1,30 @@
+> db.sample1.insertMany([
+... {empId:101,doj:new Date()},
+... {empId:102,doj:new Date(2020,10,12)},
+... {empId:103,doj:new Date(2021,10,12)}])
+{
+        "acknowledged" : true,
+        "insertedIds" : [
+                ObjectId("6038bc7f55c44430a0cbcdbb"),
+                ObjectId("6038bc7f55c44430a0cbcdbc"),
+                ObjectId("6038bc7f55c44430a0cbcdbd")
+        ]
+}
+>
+> db.sample1.createIndex({doj:1},{expireAfterSeconds:300})
+{
+        "createdCollectionAutomatically" : false,
+        "numIndexesBefore" : 1,
+        "numIndexesAfter" : 2,
+        "ok" : 1
+}
+> db.sample1.find()
+{ "_id" : ObjectId("6038bc7f55c44430a0cbcdbb"), "empId" : 101, "doj" : ISODate("2021-02-26T09:16:47.504Z") }
+{ "_id" : ObjectId("6038bc7f55c44430a0cbcdbc"), "empId" : 102, "doj" : ISODate("2020-11-11T18:30:00Z") }
+{ "_id" : ObjectId("6038bc7f55c44430a0cbcdbd"), "empId" : 103, "doj" : ISODate("2021-11-11T18:30:00Z") }
+> db.sample1.find()
+{ "_id" : ObjectId("6038bc7f55c44430a0cbcdbb"), "empId" : 101, "doj" : ISODate("2021-02-26T09:16:47.504Z") }
+{ "_id" : ObjectId("6038bc7f55c44430a0cbcdbd"), "empId" : 103, "doj" : ISODate("2021-11-11T18:30:00Z") }
+> db.sample1.find()
+{ "_id" : ObjectId("6038bc7f55c44430a0cbcdbd"), "empId" : 103, "doj" : ISODate("2021-11-11T18:30:00Z") }
+>  
